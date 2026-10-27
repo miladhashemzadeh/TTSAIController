@@ -28,7 +28,9 @@ data class TouchAutomationState(
     val validationError: String? = null,
     val platformCapability: PlatformTouchCapability = PlatformTouchCapability("Unknown", true),
     val isSettingsDialogOpen: Boolean = false,
-    val isSaveDialogOpen: Boolean = false
+    val isSaveDialogOpen: Boolean = false,
+    val isPermissionDialogOpen: Boolean = false,
+    val isOverlayPermissionGranted: Boolean = true
 ) : MviState
 
 sealed interface TouchAutomationIntent : MviIntent {
@@ -60,6 +62,9 @@ sealed interface TouchAutomationIntent : MviIntent {
     data object StopAutomation : TouchAutomationIntent
     data object DismissError : TouchAutomationIntent
     data object RefreshCapabilities : TouchAutomationIntent
+    data object OpenPermissionDialog : TouchAutomationIntent
+    data object ClosePermissionDialog : TouchAutomationIntent
+    data class UpdateOverlayPermission(val isGranted: Boolean) : TouchAutomationIntent
 }
 
 sealed interface TouchAutomationEffect : MviEffect {

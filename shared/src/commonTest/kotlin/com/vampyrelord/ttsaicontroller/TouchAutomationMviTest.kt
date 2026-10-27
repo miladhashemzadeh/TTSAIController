@@ -139,4 +139,21 @@ class TouchAutomationMviTest {
         assertEquals("Unit Test Routine", vm.currentState.configNameInput)
         assertEquals(2, vm.currentState.touchPoints.size)
     }
+
+    @Test
+    fun testPermissionDialogAndCapabilities() = runTest {
+        val (_, vm) = createTestViewModel()
+
+        vm.handleIntent(TouchAutomationIntent.OpenPermissionDialog)
+        assertTrue(vm.currentState.isPermissionDialogOpen)
+
+        vm.handleIntent(TouchAutomationIntent.ClosePermissionDialog)
+        kotlin.test.assertFalse(vm.currentState.isPermissionDialogOpen)
+
+        vm.handleIntent(TouchAutomationIntent.UpdateOverlayPermission(false))
+        kotlin.test.assertFalse(vm.currentState.isOverlayPermissionGranted)
+
+        vm.handleIntent(TouchAutomationIntent.UpdateOverlayPermission(true))
+        assertTrue(vm.currentState.isOverlayPermissionGranted)
+    }
 }

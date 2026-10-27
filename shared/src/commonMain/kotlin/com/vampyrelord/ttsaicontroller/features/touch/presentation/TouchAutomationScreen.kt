@@ -68,20 +68,27 @@ import com.vampyrelord.ttsaicontroller.features.touch.domain.model.TouchActionTy
 import com.vampyrelord.ttsaicontroller.features.touch.domain.model.TouchExecutionStatus
 import com.vampyrelord.ttsaicontroller.features.touch.presentation.mvi.TouchAutomationIntent
 import com.vampyrelord.ttsaicontroller.features.touch.presentation.mvi.TouchAutomationState
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.vampyrelord.ttsaicontroller.features.touch.domain.model.PlatformTouchCapability
 import kotlin.math.roundToInt
 
 @Composable
 fun TouchAutomationScreen(
     viewModel: TouchAutomationViewModel,
     modifier: Modifier = Modifier,
-    onRequestAccessibilitySettings: (() -> Unit)? = null
+    onRequestAccessibilitySettings: (() -> Unit)? = null,
+    onRequestOverlaySettings: (() -> Unit)? = null,
+    onCheckOverlayPermission: (() -> Boolean)? = null
 ) {
     val state by viewModel.state.collectAsState()
     TouchAutomationScreen(
         state = state,
         onIntent = viewModel::sendIntent,
         modifier = modifier,
-        onRequestAccessibilitySettings = onRequestAccessibilitySettings
+        onRequestAccessibilitySettings = onRequestAccessibilitySettings,
+        onRequestOverlaySettings = onRequestOverlaySettings,
+        onCheckOverlayPermission = onCheckOverlayPermission
     )
 }
 
@@ -90,9 +97,18 @@ fun TouchAutomationScreen(
     state: TouchAutomationState,
     onIntent: (TouchAutomationIntent) -> Unit,
     modifier: Modifier = Modifier,
-    onRequestAccessibilitySettings: (() -> Unit)? = null
+    onRequestAccessibilitySettings: (() -> Unit)? = null,
+    onRequestOverlaySettings: (() -> Unit)? = null,
+    onCheckOverlayPermission: (() -> Boolean)? = null
 ) {
     val isRunning = state.executionState.status == TouchExecutionStatus.RUNNING
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        onIntent(TouchAutomationIntent.RefreshCapabilities)
+        onCheckOverlayPermission?.invoke()?.let { granted ->
+            onIntent(TouchAutomationIntent.UpdateOverlayPermission(granted))
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -894,6 +910,149 @@ fun SaveConfigurationDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun AutomationPermissionsDialog(
+    platformCapability: PlatformTouchCapability,
+    isOverlayGranted: Boolean,
+    onDismiss: () -> Unit,
+    onRequestAccessibility: (() -> Unit)?,
+    onRequestOverlay: (() -> Unit)?,
+    onCheckAgain: () -> Unit
+) {
+    val isAccessibilityEnabled = platformCapability.isAccessibilityServiceEnabled
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "AUTOMATION PERMISSIONS",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                ),
+                color = AmberWarning
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "To execute touch automation routines and render visual touch indicators, the following permissions are required:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // 1. Accessibility Service
+                AppCard(
+                    borderColor = if (isAccessibilityEnabled) EmeraldGreen else AmberWarning
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "1. Accessibility Service",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = if (isAccessibilityEnabled) EmeraldGreen else AmberWarning
+                        )
+                        StatusBadge(
+                            status = if (isAccessibilityEnabled) "ACTIVE" else "REQUIRED",
+                            isActive = isAccessibilityEnabled,
+                            color = if (isAccessibilityEnabled) EmeraldGreen else AmberWarning
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Allows TTSAIController to execute touch routines, taps, and gestures across other apps.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (!isAccessibilityEnabled && onRequestAccessibility != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = onRequestAccessibility,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = AmberWarning)
+                        ) {
+                            Text("Open Accessibility Settings", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    } else if (isAccessibilityEnabled) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "[OK] Accessibility Service is active and ready.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = EmeraldGreen
+                        )
+                    }
+                }
+
+                // 2. Overlay / Draw Over Apps Permission
+                if (platformCapability.requiresOverlayPermission) {
+                    AppCard(
+                        borderColor = if (isOverlayGranted) EmeraldGreen else CyberCyan
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "2. Display Over Other Apps",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = if (isOverlayGranted) EmeraldGreen else CyberCyan
+                            )
+                            StatusBadge(
+                                status = if (isOverlayGranted) "GRANTED" else "OPTIONAL",
+                                isActive = isOverlayGranted,
+                                color = if (isOverlayGranted) EmeraldGreen else CyberCyan
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Allows rendering floating touch markers and progress indicators while automation runs.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (!isOverlayGranted && onRequestOverlay != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = onRequestOverlay,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Allow Display Over Apps")
+                            }
+                        } else if (isOverlayGranted) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "[OK] Overlay display permission granted.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = EmeraldGreen
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onCheckAgain,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isAccessibilityEnabled) EmeraldGreen else CyberCyan
+                )
+            ) {
+                Text(
+                    text = if (isAccessibilityEnabled) "Ready & Continue" else "Check Permissions",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss")
             }
         }
     )

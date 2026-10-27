@@ -41,6 +41,7 @@ class TouchAutomationViewModel(
 ) : BaseMviViewModel<TouchAutomationState, TouchAutomationIntent, TouchAutomationEffect>(
     TouchAutomationState(
         platformCapability = controller.checkCapabilities(),
+        isPermissionDialogOpen = controller.checkCapabilities().requiresAccessibilityService && !controller.checkCapabilities().isAccessibilityServiceEnabled,
         touchPoints = repository.activeConfiguration.value?.points
             ?: generatePositionsUseCase(3, AutomaticPlacementStrategy.GRID, repository.rushwulfSettings.value),
         touchCount = repository.activeConfiguration.value?.points?.size ?: 3,
@@ -271,7 +272,23 @@ class TouchAutomationViewModel(
                 setState { copy(validationError = null) }
             }
             is TouchAutomationIntent.RefreshCapabilities -> {
-                setState { copy(platformCapability = controller.checkCapabilities()) }
+                val caps = controller.checkCapabilities()
+                setState {
+                    copy(
+                        platformCapability = caps,
+                        isPermissionDialogOpen = if (caps.isAutomationSupported) false else isPermissionDialogOpen,
+                        validationError = if (caps.isAutomationSupported && validationError == caps.guidanceMessage) null else validationError
+                    )
+                }
+            }
+            is TouchAutomationIntent.OpenPermissionDialog -> {
+                setState { copy(isPermissionDialogOpen = true) }
+            }
+            is TouchAutomationIntent.ClosePermissionDialog -> {
+                setState { copy(isPermissionDialogOpen = false) }
+            }
+            is TouchAutomationIntent.UpdateOverlayPermission -> {
+                setState { copy(isOverlayPermissionGranted = intent.isGranted) }
             }
         }
     }
@@ -331,7 +348,12 @@ class TouchAutomationViewModel(
         setState { copy(platformCapability = capabilities) }
 
         if (!capabilities.isAutomationSupported) {
-            setState { copy(validationError = capabilities.guidanceMessage) }
+            setState {
+                copy(
+                    validationError = capabilities.guidanceMessage,
+                    isPermissionDialogOpen = true
+                )
+            }
             if (capabilities.requiresAccessibilityService) {
                 sendEffect(TouchAutomationEffect.RequestAccessibilityPermission(capabilities.guidanceMessage))
             }

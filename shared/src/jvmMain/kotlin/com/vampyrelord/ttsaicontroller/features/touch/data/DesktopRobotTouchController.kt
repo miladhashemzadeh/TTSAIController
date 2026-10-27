@@ -16,7 +16,7 @@ class DesktopRobotTouchController : BaseTouchController() {
     private val robot: Robot? by lazy {
         try {
             Robot().apply { isAutoWaitForIdle = true }
-        } catch (e: AWTException) {
+        } catch (e: Throwable) {
             null
         }
     }

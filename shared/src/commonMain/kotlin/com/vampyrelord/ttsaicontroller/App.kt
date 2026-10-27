@@ -42,7 +42,9 @@ import com.vampyrelord.ttsaicontroller.features.tts.presentation.TtsScreen
 @Composable
 fun App(
     container: AppContainer = remember { AppContainer() },
-    onRequestAccessibilitySettings: (() -> Unit)? = null
+    onRequestAccessibilitySettings: (() -> Unit)? = null,
+    onRequestOverlaySettings: (() -> Unit)? = null,
+    onCheckOverlayPermission: (() -> Boolean)? = null
 ) {
     val settingsState by container.settingsViewModel.state.collectAsState()
     val isSystemDark = isSystemInDarkTheme()
@@ -81,7 +83,9 @@ fun App(
                             TouchAutomationScreen(
                                 state = touchState,
                                 onIntent = container.touchAutomationViewModel::sendIntent,
-                                onRequestAccessibilitySettings = onRequestAccessibilitySettings
+                                onRequestAccessibilitySettings = onRequestAccessibilitySettings,
+                                onRequestOverlaySettings = onRequestOverlaySettings,
+                                onCheckOverlayPermission = onCheckOverlayPermission
                             )
                         }
                         Screen.Dashboard -> {
