@@ -4,9 +4,12 @@ import com.vampyrelord.ttsaicontroller.core.architecture.AppResult
 import com.vampyrelord.ttsaicontroller.core.di.AppContainer
 import com.vampyrelord.ttsaicontroller.core.navigation.Screen
 import com.vampyrelord.ttsaicontroller.features.settings.domain.model.AppThemeMode
+import com.vampyrelord.ttsaicontroller.features.stt.domain.model.AudioConfig
+import com.vampyrelord.ttsaicontroller.features.stt.domain.model.TranscriptionStatus
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ArchitectureMviTest {
@@ -27,40 +30,35 @@ class ArchitectureMviTest {
     }
 
     @Test
-    fun testTtsUseCaseAndRepositoryFlow() = runTest {
+    fun testSpeechToTextUseCaseAndRepositoryFlow() = runTest {
         val container = AppContainer()
-        val ttsRepo = container.ttsRepository
-        val speakUseCase = container.speakTextUseCase
-        val stopUseCase = container.stopSpeechUseCase
+        val sttRepo = container.speechToTextRepository
+        val startUseCase = container.startSpeechToTextUseCase
+        val stopUseCase = container.stopSpeechToTextUseCase
+        val capabilityUseCase = container.getSttCapabilityUseCase
 
-        val voices = ttsRepo.getAvailableVoices()
-        assertTrue(voices.isNotEmpty())
+        // Check initial state
+        assertEquals(TranscriptionStatus.IDLE, sttRepo.transcriptionStatus.value)
 
-        val speakRes = speakUseCase(
-            text = "Clean architecture domain test",
-            voice = voices.first(),
-            pitch = 1.0f,
-            rate = 1.0f
-        )
-        assertTrue(speakRes is AppResult.Success)
-        assertEquals("Clean architecture domain test", speakRes.data.text)
+        // Check capability contract
+        val cap = capabilityUseCase()
+        assertTrue(cap.aiModelRequired)
+        assertTrue(cap.supportsLiveStreaming)
 
-        // Wait brief moment for asynchronous engine background coroutine to start
-        var waited = 0
-        while (!ttsRepo.engineStatus.value.isSpeaking && waited < 40) {
-            Thread.sleep(25)
-            waited++
-        }
-        assertTrue(ttsRepo.engineStatus.value.isSpeaking)
+        // Start listening
+        val startRes = startUseCase(AudioConfig(language = "en", sampleRate = 16000))
+        assertTrue(startRes is AppResult.Success)
+        assertEquals(TranscriptionStatus.LISTENING, sttRepo.transcriptionStatus.value)
 
+        // Stop listening and transcribe
         val stopRes = stopUseCase()
         assertTrue(stopRes is AppResult.Success)
-        var stopWaited = 0
-        while (ttsRepo.engineStatus.value.isSpeaking && stopWaited < 40) {
-            Thread.sleep(25)
-            stopWaited++
-        }
-        assertEquals(false, ttsRepo.engineStatus.value.isSpeaking)
+        assertEquals(TranscriptionStatus.COMPLETED, sttRepo.transcriptionStatus.value)
+
+        val transcription = stopRes.data
+        assertNotNull(transcription)
+        assertTrue(transcription.fullText.isNotEmpty())
+        assertEquals(true, transcription.aiModelInfo?.contains("Pending AI Model"))
     }
 
     @Test
@@ -70,8 +68,8 @@ class ArchitectureMviTest {
 
         assertEquals(Screen.TouchAutomation, navigator.currentScreen.value)
 
-        navigator.navigateTo(Screen.TtsStudio)
-        assertEquals(Screen.TtsStudio, navigator.currentScreen.value)
+        navigator.navigateTo(Screen.SttStudio)
+        assertEquals(Screen.SttStudio, navigator.currentScreen.value)
 
         val popped = navigator.goBack()
         assertEquals(true, popped)

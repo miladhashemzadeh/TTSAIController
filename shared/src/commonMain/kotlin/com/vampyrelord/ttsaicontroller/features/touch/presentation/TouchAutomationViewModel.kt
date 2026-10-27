@@ -3,7 +3,7 @@ package com.vampyrelord.ttsaicontroller.features.touch.presentation
 import androidx.lifecycle.viewModelScope
 import com.vampyrelord.ttsaicontroller.core.architecture.AppResult
 import com.vampyrelord.ttsaicontroller.core.architecture.BaseMviViewModel
-import com.vampyrelord.ttsaicontroller.core.rtk.currentTimeMillis
+import com.vampyrelord.ttsaicontroller.core.util.currentTimeMillis
 import com.vampyrelord.ttsaicontroller.features.touch.domain.TouchConfigRepository
 import com.vampyrelord.ttsaicontroller.features.touch.domain.TouchController
 import com.vampyrelord.ttsaicontroller.features.touch.domain.model.AutomaticPlacementStrategy
@@ -72,7 +72,7 @@ class TouchAutomationViewModel(
 
         // Observe active configuration
         repository.activeConfiguration.onEach { activeConfig ->
-            if (activeConfig != null) {
+            if (activeConfig != null && activeConfig.id != currentState.selectedConfigId) {
                 setState {
                     copy(
                         touchPoints = activeConfig.points,
@@ -84,7 +84,7 @@ class TouchAutomationViewModel(
                         rushwulfSettings = activeConfig.rushwulfSettings
                     )
                 }
-            } else {
+            } else if (activeConfig == null && currentState.touchPoints.isEmpty()) {
                 // Initialize default positions
                 generateDefaultPositions()
             }
@@ -104,15 +104,15 @@ class TouchAutomationViewModel(
         when (intent) {
             is TouchAutomationIntent.SetTouchCount -> {
                 val newCount = intent.count.coerceIn(1, 20)
-                setState { copy(touchCount = newCount) }
                 if (currentState.placementMode == PlacementMode.AUTOMATIC) {
                     val points = generatePositionsUseCase(
                         count = newCount,
                         strategy = currentState.automaticStrategy,
                         rushwulfSettings = currentState.rushwulfSettings
                     )
-                    setState { copy(touchPoints = points) }
+                    setState { copy(touchCount = newCount, touchPoints = points) }
                 } else {
+                    setState { copy(touchCount = newCount) }
                     adjustManualPointCount(newCount)
                 }
             }

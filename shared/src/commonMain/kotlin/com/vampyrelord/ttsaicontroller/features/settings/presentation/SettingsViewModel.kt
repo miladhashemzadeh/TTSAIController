@@ -26,25 +26,31 @@ class SettingsViewModel(
         }.launchIn(viewModelScope)
     }
 
-    override suspend fun handleIntent(intent: SettingsIntent) {
+    public override suspend fun handleIntent(intent: SettingsIntent) {
         when (intent) {
             is SettingsIntent.SetThemeMode -> {
                 updateSettingsUseCase { it.copy(themeMode = intent.mode) }
+                setState { copy(settings = settingsRepository.settings.value) }
             }
             is SettingsIntent.ToggleAutoPlay -> {
                 updateSettingsUseCase { it.copy(autoPlayOnQueue = intent.enabled) }
+                setState { copy(settings = settingsRepository.settings.value) }
             }
             is SettingsIntent.ToggleAgentAutonomous -> {
                 updateSettingsUseCase { it.copy(agentAutonomousEnabled = intent.enabled) }
+                setState { copy(settings = settingsRepository.settings.value) }
             }
             is SettingsIntent.ToggleWaveform -> {
                 updateSettingsUseCase { it.copy(showWaveformAnimation = intent.enabled) }
+                setState { copy(settings = settingsRepository.settings.value) }
             }
             is SettingsIntent.SetAudioRouting -> {
                 updateSettingsUseCase { it.copy(audioRouting = intent.routing) }
+                setState { copy(settings = settingsRepository.settings.value) }
             }
             is SettingsIntent.ResetToDefaults -> {
                 resetSettingsUseCase()
+                setState { copy(settings = settingsRepository.settings.value) }
                 sendEffect(SettingsEffect.ShowToast("Settings reset to defaults"))
             }
         }

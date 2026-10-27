@@ -1,6 +1,6 @@
 package com.vampyrelord.ttsaicontroller.features.touch.data
 
-import com.vampyrelord.ttsaicontroller.core.rtk.currentTimeMillis
+import com.vampyrelord.ttsaicontroller.core.util.currentTimeMillis
 import com.vampyrelord.ttsaicontroller.features.touch.domain.TouchController
 import com.vampyrelord.ttsaicontroller.features.touch.domain.model.ScrollDirection
 import com.vampyrelord.ttsaicontroller.features.touch.domain.model.TouchActionType

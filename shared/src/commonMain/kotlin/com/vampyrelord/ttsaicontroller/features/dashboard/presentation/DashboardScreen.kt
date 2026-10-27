@@ -1,10 +1,6 @@
 package com.vampyrelord.ttsaicontroller.features.dashboard.presentation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -24,8 +19,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,7 +26,6 @@ import com.vampyrelord.ttsaicontroller.core.designsystem.AppCard
 import com.vampyrelord.ttsaicontroller.core.designsystem.CyberCyan
 import com.vampyrelord.ttsaicontroller.core.designsystem.EmeraldGreen
 import com.vampyrelord.ttsaicontroller.core.designsystem.NeonPurple
-import com.vampyrelord.ttsaicontroller.core.designsystem.RoseError
 import com.vampyrelord.ttsaicontroller.core.designsystem.SectionHeader
 import com.vampyrelord.ttsaicontroller.core.designsystem.StatusBadge
 import com.vampyrelord.ttsaicontroller.core.designsystem.WaveformVisualizer
@@ -71,7 +63,7 @@ fun DashboardScreen(
         // Hero Overview Card
         item {
             AppCard(
-                borderColor = if (metrics.isSpeaking) CyberCyan else MaterialTheme.colorScheme.surfaceVariant
+                borderColor = if (metrics.isListening) CyberCyan else MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -80,7 +72,7 @@ fun DashboardScreen(
                 ) {
                     Column {
                         Text(
-                            text = "TTS AI CONTROLLER",
+                            text = "STT & TOUCH CONTROLLER",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.sp
@@ -88,29 +80,31 @@ fun DashboardScreen(
                             color = CyberCyan
                         )
                         Text(
-                            text = "Clean Architecture • MVI • Agent RTK",
+                            text = "Clean Architecture • MVI • Multiplatform",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     StatusBadge(
-                        status = if (metrics.isSpeaking) "SPEAKING" else if (metrics.isPaused) "PAUSED" else "READY",
-                        isActive = metrics.isSpeaking
+                        status = if (metrics.isListening) "LISTENING" else metrics.transcriptionStatus.name,
+                        isActive = metrics.isListening
                     )
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
                 WaveformVisualizer(
-                    isSpeaking = metrics.isSpeaking,
+                    isSpeaking = metrics.isListening,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = if (metrics.isSpeaking) {
-                        "Active Job: \"${metrics.activeJobText ?: "Processing speech stream..."}\""
+                    text = if (metrics.isListening) {
+                        "Listening to audio input stream..."
+                    } else if (metrics.lastTranscript != null) {
+                        "Last Transcript: \"${metrics.lastTranscript}\""
                     } else {
-                        "System standby. Audio engine and RTK agent listeners are active."
+                        "System standby. Speech-To-Text contracts ready for AI model (Whisper/Gemini/ONNX)."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -124,39 +118,39 @@ fun DashboardScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Metric 1: Queue & Processed
+                // Metric 1: STT Engine Status
                 AppCard(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "SPEECH QUEUE",
+                        text = "SPEECH TO TEXT",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${metrics.queueCount}",
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black)
+                        text = metrics.transcriptionStatus.name,
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black)
                     )
                     Text(
-                        text = "${metrics.processedCount} processed",
+                        text = metrics.aiEngineName,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                // Metric 2: Agent Tools & Activity
+                // Metric 2: Touch Automation Status
                 AppCard(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "AGENT RTK",
+                        text = "TOUCH AUTOMATION",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = NeonPurple
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${metrics.totalAgentTools} Tools",
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black)
+                        text = if (metrics.isTouchRunning) "RUNNING" else "STANDBY",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black)
                     )
                     Text(
-                        text = "${metrics.totalAgentCommands} dispatches",
+                        text = "${metrics.totalSavedTouchConfigs} Saved Configs",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -168,7 +162,7 @@ fun DashboardScreen(
         item {
             AppCard {
                 SectionHeader(
-                    title = "Quick Controller Operations",
+                    title = "Quick Operations",
                     subtitle = "One-click triggers to test MVI intent pipeline"
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -177,25 +171,21 @@ fun DashboardScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = {
-                            onIntent(
-                                DashboardIntent.QuickSpeak("Autonomous AI audio sequence initialized and speaking.")
-                            )
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = CyberCyan)
-                    ) {
-                        Text("Quick Speak", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
-                    }
-
-                    if (metrics.isSpeaking) {
-                        OutlinedButton(
-                            onClick = { onIntent(DashboardIntent.StopSpeech) },
+                    if (!metrics.isListening) {
+                        Button(
+                            onClick = { onIntent(DashboardIntent.StartListening) },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = RoseError)
+                            colors = ButtonDefaults.buttonColors(containerColor = CyberCyan)
                         ) {
-                            Text("Stop")
+                            Text("Start Listening", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Button(
+                            onClick = { onIntent(DashboardIntent.StopListening) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen)
+                        ) {
+                            Text("Stop & Transcribe", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -206,16 +196,16 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
-                        onClick = { onIntent(DashboardIntent.NavigateTo(Screen.TtsStudio)) },
+                        onClick = { onIntent(DashboardIntent.NavigateTo(Screen.TouchAutomation)) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Open Studio")
+                        Text("Touch Automation")
                     }
                     OutlinedButton(
-                        onClick = { onIntent(DashboardIntent.NavigateTo(Screen.AgentWorkspace)) },
+                        onClick = { onIntent(DashboardIntent.NavigateTo(Screen.SttStudio)) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Open RTK Agent")
+                        Text("Open STT Studio")
                     }
                 }
             }
@@ -226,19 +216,19 @@ fun DashboardScreen(
             AppCard {
                 SectionHeader(
                     title = "Recent System Activity",
-                    subtitle = "Latest speech jobs and agent tool invocations"
+                    subtitle = "Latest Speech-to-Text transcriptions"
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
-                if (state.recentJobs.isEmpty() && state.recentAgentLogs.isEmpty()) {
+                if (state.recentTranscriptions.isEmpty()) {
                     Text(
-                        text = "No recent jobs or agent dispatches recorded yet.",
+                        text = "No recent transcriptions recorded yet.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                state.recentJobs.forEach { job ->
+                state.recentTranscriptions.forEach { result ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -248,50 +238,19 @@ fun DashboardScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Speech: \"${job.text.take(35)}...\"",
+                                text = "STT: \"${result.fullText.take(40)}\"",
                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold)
                             )
                             Text(
-                                text = "Source: ${job.source} • Voice: ${job.voice.name}",
+                                text = "Model: ${result.aiModelInfo}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         StatusBadge(
-                            status = job.status.name,
-                            isActive = job.status.name == "COMPLETED",
+                            status = "READY",
+                            isActive = true,
                             color = EmeraldGreen
-                        )
-                    }
-                }
-
-                state.recentAgentLogs.forEach { log ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Agent RTK: ${log.toolName}",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFamily = FontFamily.Monospace,
-                                    color = NeonPurple
-                                )
-                            )
-                            Text(
-                                text = log.outputSummary.take(40),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        StatusBadge(
-                            status = log.status.name,
-                            isActive = log.status.name == "SUCCESS",
-                            color = NeonPurple
                         )
                     }
                 }

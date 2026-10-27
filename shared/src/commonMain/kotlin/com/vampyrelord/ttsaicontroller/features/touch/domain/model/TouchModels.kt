@@ -1,6 +1,6 @@
 package com.vampyrelord.ttsaicontroller.features.touch.domain.model
 
-import com.vampyrelord.ttsaicontroller.core.rtk.currentTimeMillis
+import com.vampyrelord.ttsaicontroller.core.util.currentTimeMillis
 import kotlin.math.cos
 import kotlin.math.sin
 

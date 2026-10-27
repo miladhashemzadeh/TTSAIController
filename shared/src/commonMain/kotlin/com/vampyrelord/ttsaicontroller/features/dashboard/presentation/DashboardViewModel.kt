@@ -4,46 +4,43 @@ import androidx.lifecycle.viewModelScope
 import com.vampyrelord.ttsaicontroller.core.architecture.AppResult
 import com.vampyrelord.ttsaicontroller.core.architecture.BaseMviViewModel
 import com.vampyrelord.ttsaicontroller.core.navigation.Navigator
-import com.vampyrelord.ttsaicontroller.features.agent.domain.repository.AgentRepository
 import com.vampyrelord.ttsaicontroller.features.dashboard.domain.usecase.GetDashboardMetricsUseCase
 import com.vampyrelord.ttsaicontroller.features.dashboard.presentation.mvi.DashboardEffect
 import com.vampyrelord.ttsaicontroller.features.dashboard.presentation.mvi.DashboardIntent
 import com.vampyrelord.ttsaicontroller.features.dashboard.presentation.mvi.DashboardState
-import com.vampyrelord.ttsaicontroller.features.tts.domain.repository.TtsRepository
-import com.vampyrelord.ttsaicontroller.features.tts.domain.usecase.SpeakTextUseCase
-import com.vampyrelord.ttsaicontroller.features.tts.domain.usecase.StopSpeechUseCase
+import com.vampyrelord.ttsaicontroller.features.stt.domain.model.AudioConfig
+import com.vampyrelord.ttsaicontroller.features.stt.domain.repository.SpeechToTextRepository
+import com.vampyrelord.ttsaicontroller.features.touch.domain.TouchConfigRepository
+import com.vampyrelord.ttsaicontroller.features.touch.domain.TouchController
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class DashboardViewModel(
     private val getDashboardMetricsUseCase: GetDashboardMetricsUseCase,
-    private val speakTextUseCase: SpeakTextUseCase,
-    private val stopSpeechUseCase: StopSpeechUseCase,
-    private val ttsRepository: TtsRepository,
-    private val agentRepository: AgentRepository,
+    private val speechToTextRepository: SpeechToTextRepository,
+    private val touchConfigRepository: TouchConfigRepository,
+    private val touchController: TouchController,
     private val navigator: Navigator
 ) : BaseMviViewModel<DashboardState, DashboardIntent, DashboardEffect>(DashboardState()) {
 
     init {
-        // Automatically sync metrics when TTS status or Agent audit logs change
         combine(
-            ttsRepository.engineStatus,
-            ttsRepository.speechHistory,
-            agentRepository.auditLogs
-        ) { status, history, logs ->
+            speechToTextRepository.transcriptionStatus,
+            speechToTextRepository.activeTranscription,
+            touchController.executionState,
+            touchConfigRepository.savedConfigurations
+        ) { _, activeTranscription, _, _ ->
             refreshMetrics()
             setState {
                 copy(
-                    recentJobs = history.take(3),
-                    recentAgentLogs = logs.take(3)
+                    recentTranscriptions = if (activeTranscription != null) listOf(activeTranscription) else emptyList()
                 )
             }
         }.launchIn(viewModelScope)
     }
 
-    private fun refreshMetrics() {
+    fun refreshMetrics() {
         viewModelScope.launch {
             when (val res = getDashboardMetricsUseCase()) {
                 is AppResult.Success -> setState { copy(metrics = res.data) }
@@ -53,22 +50,39 @@ class DashboardViewModel(
         }
     }
 
-    override suspend fun handleIntent(intent: DashboardIntent) {
+    public override suspend fun handleIntent(intent: DashboardIntent) {
         when (intent) {
             is DashboardIntent.Refresh -> {
                 refreshMetrics()
             }
-            is DashboardIntent.QuickSpeak -> {
-                val voices = ttsRepository.getAvailableVoices()
-                val voice = voices.firstOrNull()
-                if (voice != null) {
-                    speakTextUseCase(intent.text, voice, source = "DASHBOARD")
-                } else {
-                    sendEffect(DashboardEffect.ShowToast("No voice available"))
+            is DashboardIntent.StartListening -> {
+                when (val res = speechToTextRepository.startListening(AudioConfig())) {
+                    is AppResult.Success -> {
+                        setState { copy(metrics = metrics.copy(isListening = true, transcriptionStatus = com.vampyrelord.ttsaicontroller.features.stt.domain.model.TranscriptionStatus.LISTENING)) }
+                        sendEffect(DashboardEffect.ShowToast("Listening started"))
+                    }
+                    is AppResult.Error -> sendEffect(DashboardEffect.ShowToast("Failed: ${res.message}"))
+                    is AppResult.Loading -> Unit
                 }
             }
-            is DashboardIntent.StopSpeech -> {
-                stopSpeechUseCase()
+            is DashboardIntent.StopListening -> {
+                when (val res = speechToTextRepository.stopListening()) {
+                    is AppResult.Success -> {
+                        setState {
+                            copy(
+                                metrics = metrics.copy(
+                                    isListening = false,
+                                    transcriptionStatus = com.vampyrelord.ttsaicontroller.features.stt.domain.model.TranscriptionStatus.COMPLETED,
+                                    lastTranscript = res.data.fullText
+                                ),
+                                recentTranscriptions = listOf(res.data)
+                            )
+                        }
+                        sendEffect(DashboardEffect.ShowToast("Transcribed: ${res.data.fullText}"))
+                    }
+                    is AppResult.Error -> sendEffect(DashboardEffect.ShowToast("Failed: ${res.message}"))
+                    is AppResult.Loading -> Unit
+                }
             }
             is DashboardIntent.NavigateTo -> {
                 navigator.navigateTo(intent.screen)

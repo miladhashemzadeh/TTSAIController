@@ -211,8 +211,7 @@ fun AppBottomNav(
                         text = when (screen) {
                             Screen.TouchAutomation -> "[Touch]"
                             Screen.Dashboard -> "[Dash]"
-                            Screen.TtsStudio -> "[TTS]"
-                            Screen.AgentWorkspace -> "[Agent]"
+                            Screen.SttStudio -> "[STT]"
                             Screen.Settings -> "[Config]"
                         },
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),

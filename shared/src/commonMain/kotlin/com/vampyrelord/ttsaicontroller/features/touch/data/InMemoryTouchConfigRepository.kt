@@ -1,7 +1,5 @@
 package com.vampyrelord.ttsaicontroller.features.touch.data
 
-import com.vampyrelord.ttsaicontroller.core.rtk.RtkAction
-import com.vampyrelord.ttsaicontroller.core.rtk.RtkStore
 import com.vampyrelord.ttsaicontroller.features.touch.domain.TouchConfigRepository
 import com.vampyrelord.ttsaicontroller.features.touch.domain.model.AutomaticPlacementStrategy
 import com.vampyrelord.ttsaicontroller.features.touch.domain.model.PlacementMode
@@ -14,9 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class InMemoryTouchConfigRepository(
-    private val rtkStore: RtkStore
-) : TouchConfigRepository {
+class InMemoryTouchConfigRepository : TouchConfigRepository {
 
     private val defaultRushwulfSettings = RushwulfSettings(
         profileName = "Rushwulf Pro Macro",
@@ -75,16 +71,6 @@ class InMemoryTouchConfigRepository(
                 listOf(config) + current
             }
         }
-        rtkStore.dispatch(
-            RtkAction(
-                type = "touch/config_saved",
-                payload = mapOf(
-                    "id" to config.id,
-                    "name" to config.name,
-                    "pointCount" to config.points.size
-                )
-            )
-        )
     }
 
     override suspend fun loadConfiguration(configId: String): SavedTouchConfig? {
@@ -101,9 +87,6 @@ class InMemoryTouchConfigRepository(
         if (_activeConfig.value?.id == configId) {
             _activeConfig.value = _savedConfigs.value.firstOrNull()
         }
-        rtkStore.dispatch(
-            RtkAction(type = "touch/config_deleted", payload = mapOf("id" to configId))
-        )
     }
 
     override suspend fun setActiveConfiguration(config: SavedTouchConfig?) {
@@ -115,16 +98,5 @@ class InMemoryTouchConfigRepository(
 
     override suspend fun updateRushwulfSettings(transform: (RushwulfSettings) -> RushwulfSettings) {
         _rushwulfSettings.update(transform)
-        val updated = _rushwulfSettings.value
-        rtkStore.dispatch(
-            RtkAction(
-                type = "touch/rushwulf_settings_updated",
-                payload = mapOf(
-                    "profileName" to updated.profileName,
-                    "stepDelay" to updated.defaultStepDelayMs,
-                    "repeatCount" to updated.repeatCount
-                )
-            )
-        )
     }
 }

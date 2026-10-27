@@ -4,21 +4,19 @@ import com.vampyrelord.ttsaicontroller.core.architecture.MviEffect
 import com.vampyrelord.ttsaicontroller.core.architecture.MviIntent
 import com.vampyrelord.ttsaicontroller.core.architecture.MviState
 import com.vampyrelord.ttsaicontroller.core.navigation.Screen
-import com.vampyrelord.ttsaicontroller.core.rtk.AgentAuditRecord
 import com.vampyrelord.ttsaicontroller.features.dashboard.domain.model.DashboardMetrics
-import com.vampyrelord.ttsaicontroller.features.tts.domain.model.SpeechJob
+import com.vampyrelord.ttsaicontroller.features.stt.domain.model.TranscriptionResult
 
 data class DashboardState(
     val metrics: DashboardMetrics = DashboardMetrics(),
-    val recentJobs: List<SpeechJob> = emptyList(),
-    val recentAgentLogs: List<AgentAuditRecord> = emptyList(),
+    val recentTranscriptions: List<TranscriptionResult> = emptyList(),
     val isRefreshing: Boolean = false
 ) : MviState
 
 sealed interface DashboardIntent : MviIntent {
     data object Refresh : DashboardIntent
-    data class QuickSpeak(val text: String) : DashboardIntent
-    data object StopSpeech : DashboardIntent
+    data object StartListening : DashboardIntent
+    data object StopListening : DashboardIntent
     data class NavigateTo(val screen: Screen) : DashboardIntent
 }
 

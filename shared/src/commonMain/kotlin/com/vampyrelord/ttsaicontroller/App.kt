@@ -28,12 +28,11 @@ import com.vampyrelord.ttsaicontroller.core.designsystem.AppTheme
 import com.vampyrelord.ttsaicontroller.core.designsystem.CyberCyan
 import com.vampyrelord.ttsaicontroller.core.di.AppContainer
 import com.vampyrelord.ttsaicontroller.core.navigation.Screen
-import com.vampyrelord.ttsaicontroller.features.agent.presentation.AgentScreen
 import com.vampyrelord.ttsaicontroller.features.dashboard.presentation.DashboardScreen
 import com.vampyrelord.ttsaicontroller.features.settings.domain.model.AppThemeMode
 import com.vampyrelord.ttsaicontroller.features.settings.presentation.SettingsScreen
+import com.vampyrelord.ttsaicontroller.features.stt.presentation.SttScreen
 import com.vampyrelord.ttsaicontroller.features.touch.presentation.TouchAutomationScreen
-import com.vampyrelord.ttsaicontroller.features.tts.presentation.TtsScreen
 
 /**
  * Universal Root Application UI for Android, iOS, and JVM Desktop.
@@ -95,18 +94,11 @@ fun App(
                                 onIntent = container.dashboardViewModel::sendIntent
                             )
                         }
-                        Screen.TtsStudio -> {
-                            val ttsState by container.ttsViewModel.state.collectAsState()
-                            TtsScreen(
-                                state = ttsState,
-                                onIntent = container.ttsViewModel::sendIntent
-                            )
-                        }
-                        Screen.AgentWorkspace -> {
-                            val agentState by container.agentViewModel.state.collectAsState()
-                            AgentScreen(
-                                state = agentState,
-                                onIntent = container.agentViewModel::sendIntent
+                        Screen.SttStudio -> {
+                            val sttState by container.sttViewModel.state.collectAsState()
+                            SttScreen(
+                                state = sttState,
+                                onIntent = container.sttViewModel::sendIntent
                             )
                         }
                         Screen.Settings -> {

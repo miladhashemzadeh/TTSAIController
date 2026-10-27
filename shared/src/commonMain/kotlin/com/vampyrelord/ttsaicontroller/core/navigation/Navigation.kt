@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Screen routes for the TTS AI Controller application.
+ * Screen routes for the Touch Automation & STT Controller application.
  */
 sealed class Screen(
     val route: String,
@@ -14,12 +14,11 @@ sealed class Screen(
 ) {
     data object TouchAutomation : Screen("touch_automation", "Touch", "touch")
     data object Dashboard : Screen("dashboard", "Dashboard", "dashboard")
-    data object TtsStudio : Screen("tts_studio", "TTS Studio", "tts")
-    data object AgentWorkspace : Screen("agent_workspace", "Agent RTK", "agent")
+    data object SttStudio : Screen("stt_studio", "Speech To Text", "stt")
     data object Settings : Screen("settings", "Settings", "settings")
 
     companion object {
-        val all = listOf(TouchAutomation, Dashboard, TtsStudio, AgentWorkspace, Settings)
+        val all: List<Screen> get() = listOf(TouchAutomation, Dashboard, SttStudio, Settings)
     }
 }
 
