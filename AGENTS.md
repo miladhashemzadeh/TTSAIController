@@ -1,29 +1,29 @@
 # AGENTS.md — AI Agent Guide to TTSAIController
 
-Welcome to **TTSAIController**. This document is specifically structured to provide autonomous AI agents, coding assistants (Gemini, Claude, GPT), and automated execution agents with an immediate, unambiguous understanding of the system architecture, requirements, navigation, and runtime integration protocols.
+Welcome to **TTSAIController**. This document is specifically structured to provide autonomous AI agents, coding assistants (Gemini, Claude, GPT, Cursor), and automated execution scripts with an immediate, unambiguous understanding of the system architecture, navigation, testing protocols, AI model integration points, and **RTK (Rust Token Killer)** token optimization for autonomous agent workflows.
 
 ---
 
 ## 1. System Overview & Mental Model
 
-`TTSAIController` is a cross-platform Text-To-Speech (TTS) orchestrator and controller built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**.
+`TTSAIController` is a cross-platform Text-To-Speech / Speech-To-Text and Touch Automation orchestrator built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform** targeting **Android**, **Desktop (JVM)**, and **iOS**.
 
 ### Architectural Invariants:
 1. **Layered Modular Feature-Based Clean Architecture**:
    - Every feature is self-contained under `com.vampyrelord.ttsaicontroller.features.<feature_name>`.
    - Clear unidirectional dependencies: **Presentation → Domain ← Data**.
    - The **Domain layer** contains zero framework, Android, or Compose dependencies.
-2. **Model-View-Intent (MVI) for All Screens**:
+2. **Model-View-Intent (MVI) with Clean State Hoisting**:
    - **`State`**: Single, immutable data class representing the complete screen state.
    - **`Intent`**: Sealed interface representing all user or agent interactions dispatched to the ViewModel.
-   - **`Effect`**: Sealed interface representing transient one-off side effects (toasts, alerts, triggers).
+   - **`Effect`**: Sealed interface representing transient one-off side effects (dialog triggers, toasts, navigation).
    - ViewModels inherit from [`BaseMviViewModel<State, Intent, Effect>`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/core/architecture/BaseMviViewModel.kt).
+   - **Compose Hoisting**: Composable screen content functions accept immutable state and event lambda callbacks (`onIntent: (Intent) -> Unit`), never raw ViewModels.
 3. **Compose Multiplatform with Least Differences**:
    - 100% of the UI screens, design system, theme, and navigation live in `shared/src/commonMain`.
    - Platform entry points (`androidApp/MainActivity.kt`, `desktopApp/main.kt`, `iosApp/MainViewController.kt`) only call `App()`.
-4. **RTK (Redux Toolkit & Agent Runtime Kit)**:
-   - Centralized Redux store with slices, reducers, middleware, and typed action dispatchers.
-   - Autonomous Agent Tool Registry: exposes structured tools for LLMs and autonomous scripts to discover, query state, and execute commands against the TTS engine.
+4. **Token-Optimized Agent Workflows (RTK)**:
+   - For autonomous agents interacting with this repo via CLI, use **RTK (Rust Token Killer)** to compress build and test outputs by 60–90%, preserving LLM context windows and avoiding token exhaustion.
 
 ---
 
@@ -36,7 +36,7 @@ Welcome to **TTSAIController**. This document is specifically structured to prov
 | **Kotlin** | 2.4.20 | Multiplatform |
 | **Compose Multiplatform** | 1.12.1 | Material 3 Alpha 03 |
 | **Android Compile SDK** | 37 (Min: 24, Target: 37) | Android Studio Hedgehog or newer |
-| **Desktop Runtime** | Java JVM (Windows, macOS, Linux) | Run via `:desktopApp:run` |
+| **Desktop Runtime** | Java JVM (Windows, macOS, Linux) | Native mouse automation via `java.awt.Robot` |
 | **iOS Target** | iOS 14.0+ (Simulator Arm64, Device) | Xcode 15+ on macOS |
 
 ---
@@ -50,143 +50,144 @@ flowchart TD
     AppShell["App Container Shell (App.kt)"]
     AppShell --> Nav["Universal App Bottom Navigation / Tab Bar"]
 
+    Nav --> RouteTouch["Screen.TouchAutomation ('touch_automation') [DEFAULT]"]
     Nav --> RouteDash["Screen.Dashboard ('dashboard')"]
-    Nav --> RouteTts["Screen.TtsStudio ('tts_studio')"]
-    Nav --> RouteAgent["Screen.AgentWorkspace ('agent_workspace')"]
+    Nav --> RouteStt["Screen.Stt ('stt')"]
     Nav --> RouteSettings["Screen.Settings ('settings')"]
 
-    RouteDash -->|"Quick Action"| RouteTts
-    RouteDash -->|"Quick Action"| RouteAgent
-    RouteAgent -->|"RTK State Query"| AppShell
+    RouteTouch -->|"Switch Screen"| RouteDash
+    RouteDash -->|"Quick Action"| RouteStt
+    RouteDash -->|"Quick Action"| RouteTouch
+    RouteStt -->|"Quick Action"| RouteSettings
 ```
 
 ### Route Definitions:
 | Screen | Route ID | Title | Purpose |
 | :--- | :--- | :--- | :--- |
-| **`Screen.Dashboard`** | `"dashboard"` | `Dashboard` | Real-time system status, audio waveform, KPI counters, and quick actions. |
-| **`Screen.TtsStudio`** | `"tts_studio"` | `TTS Studio` | Speech text input, voice selection, modulation sliders (pitch, rate, volume), audio controls, and queue/history. |
-| **`Screen.AgentWorkspace`** | `"agent_workspace"` | `Agent RTK` | Agent persona selector, command prompt console, interactive tool runners, live RTK state slices, and audit log. |
-| **`Screen.Settings`** | `"settings"` | `Settings` | Theme switcher (Light/Dark/System), autonomous agent toggles, audio sink hardware routing, and platform diagnostics. |
+| **`Screen.TouchAutomation`** | `"touch_automation"` | `Touch Automation` | **Default startup screen**. Configures, visualizes, and executes touch/click automation routines with Rushwulf settings, automatic point placement (Grid, Circular, Column, Row, Spread), and runtime permissions. |
+| **`Screen.Dashboard`** | `"dashboard"` | `Dashboard` | Real-time system status, automation execution metrics, audio routing counters, and quick triggers. |
+| **`Screen.Stt`** | `"stt"` | `Speech To Text` | AI-ready Speech-to-Text interface with recording controls, audio file transcription, transcription history, and model configuration placeholders. |
+| **`Screen.Settings`** | `"settings"` | `Settings` | Theme switcher (Light/Dark/System), Rushwulf automation defaults (step delay, tap duration, repeat counts), and audio routing diagnostics. |
 
 ---
 
-## 4. RTK (Redux Toolkit & Agent Runtime Kit) Reference
+## 4. RTK (Rust Token Killer) for AI Agents
 
-The project provides an RTK implementation specifically designed for agent interaction:
+When AI agents (Gemini, Claude, GPT, Cursor, Antigravity) run terminal commands (such as Gradle builds, test suites, and git inspections), raw terminal outputs frequently contain tens of thousands of tokens of repetitive log lines, UP-TO-DATE task trees, and ANSI escape codes.
 
-### Central Store:
-- **Location**: [`com.vampyrelord.ttsaicontroller.core.rtk.RtkStore`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/core/rtk/RtkStore.kt)
-- **Active Slices**:
-  - `tts`: Tracks `isSpeaking`, `isPaused`, `activeJobId`, `lastAction`.
-  - `agent`: Tracks `executedActionsCount`, `lastToolExecuted`.
-  - `settings`: Tracks system theme, auto-play, and audio routing modes.
+**RTK (`rtk-ai/rtk`)** is a dedicated CLI tool designed to compress command line output for LLM context windows without losing any errors or relevant diagnostic information.
 
-### Available Agent RTK Tools:
-All tools implement [`AgentTool`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/core/rtk/AgentTool.kt) and are registered in [`AgentToolRegistry`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/core/rtk/AgentToolRegistry.kt):
+### Installing RTK:
+```bash
+# Via Cargo (Rust toolchain)
+cargo install rtk-ai
 
-#### 1. `speak_text`
-- **Category**: `TTS_CONTROL`
-- **Description**: Synthesize and speak specified text with specified voice and speed.
-- **Parameters**:
-  ```json
-  {
-    "text": { "type": "string", "required": true, "description": "Text to speak" },
-    "voiceId": { "type": "string", "required": false, "description": "Optional voice ID (e.g. voice-aria, voice-nova)" },
-    "pitch": { "type": "number", "required": false, "default": 1.0, "range": [0.5, 2.0] },
-    "rate": { "type": "number", "required": false, "default": 1.0, "range": [0.5, 2.5] }
-  }
-  ```
+# Via Windows Winget
+winget install rtk-ai.rtk
 
-#### 2. `stop_speech`
-- **Category**: `TTS_CONTROL`
-- **Description**: Immediately stop active playback and clear the active audio channel.
-- **Parameters**: None.
+# Via Homebrew (macOS/Linux)
+brew install rtk-ai/tap/rtk
+```
 
-#### 3. `pause_speech`
-- **Category**: `TTS_CONTROL`
-- **Description**: Temporarily pause speech audio playback.
-- **Parameters**: None.
+### Recommended RTK Usage for Agents:
+AI agents should prefix terminal verification commands with `rtk` to save 60–90% of context tokens:
 
-#### 4. `resume_speech`
-- **Category**: `TTS_CONTROL`
-- **Description**: Resume paused speech audio playback.
-- **Parameters**: None.
+```bash
+# Running Gradle tests via RTK
+rtk ./gradlew :shared:jvmTest
+rtk ./gradlew :shared:testAndroidHostTest
 
-#### 5. `get_playback_status`
-- **Category**: `SYSTEM_INSPECTION`
-- **Description**: Query playback status (`isSpeaking`, `isPaused`, `activeJobText`, `queueSize`).
-- **Parameters**: None.
+# Inspecting Git status and diffs via RTK
+rtk git status -s
+rtk git diff
 
-#### 6. `list_voices`
-- **Category**: `SYSTEM_INSPECTION`
-- **Description**: Retrieve available neural and standard voice models and languages.
-- **Parameters**: None.
+# Compiling builds via RTK
+rtk ./gradlew :desktopApp:assemble
+rtk ./gradlew :androidApp:assembleDebug
+```
 
-#### 7. `query_state_slice`
-- **Category**: `RTK_STORE`
-- **Description**: Inspect a Redux state slice.
-- **Parameters**:
-  ```json
-  {
-    "sliceName": { "type": "string", "required": true, "description": "Slice name ('tts', 'agent', etc.)" }
-  }
-  ```
-
-#### 8. `dispatch_rtk_action`
-- **Category**: `RTK_STORE`
-- **Description**: Dispatch an arbitrary Redux Toolkit action into the store.
-- **Parameters**:
-  ```json
-  {
-    "type": { "type": "string", "required": true, "description": "Action type identifier (e.g. 'agent/custom_event')" },
-    "payload": { "type": "string", "required": false, "description": "Payload data" }
-  }
-  ```
+### Why RTK is Required for AI Agents:
+- **Reduces Context Drift**: Prevents massive build logs from pushing system instructions or design rules out of context.
+- **Pinpoints Failures**: RTK strips successful tests and boilerplate UP-TO-DATE tasks, highlighting only failing assertions and exceptions.
+- **Token Efficiency**: Reduces multi-megabyte terminal payloads down to concise summaries.
 
 ---
 
-## 5. How Agents Should Add New Features
+## 5. Speech-To-Text (STT) AI Model Integration Guide
 
-When extending the codebase, agents must strictly follow the Clean Architecture + MVI pattern:
+The Speech-To-Text feature (`com.vampyrelord.ttsaicontroller.features.stt`) provides clean, unopinionated domain interfaces prepared for plug-and-play AI model integration (e.g., Whisper, Google Gemini Live / Speech API, Sherpa-ONNX, or Vosk):
+
+### Architecture of STT:
+```
+shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/features/stt/
+├── domain/
+│   ├── model/         // SttTranscription, SttConfig, SttAudioChunk, TranscriptionStatus
+│   ├── repository/    // SpeechToTextRepository (clean interface)
+│   └── usecase/       // StartSpeechToTextUseCase, StopSpeechToTextUseCase, TranscribeAudioUseCase, etc.
+├── data/
+│   └── repository/    // PendingAiSpeechToTextRepository (placeholder returning clean AppResult)
+└── presentation/
+    ├── SttScreen.kt   // Compose Multiplatform UI
+    ├── SttViewModel.kt// MVI ViewModel
+    └── mvi/           // SttMvi (State, Intent, Effect)
+```
+
+### Connecting an AI Engine:
+To plug in a real AI transcription model:
+1. Implement [`SpeechToTextRepository`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/features/stt/domain/repository/SpeechToTextRepository.kt) in `data/repository/` (e.g. `WhisperSpeechToTextRepository` or `GeminiLiveSpeechToTextRepository`).
+2. Swap the binding in [`AppContainer.kt`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/core/di/AppContainer.kt):
+   ```kotlin
+   val speechToTextRepository: SpeechToTextRepository = YourAiSpeechToTextRepository(...)
+   ```
+3. Zero changes are needed in Domain use cases or Compose UI screens.
+
+---
+
+## 6. How Agents Should Add New Features
+
+When extending the codebase, agents must strictly follow Clean Architecture + MVI:
 
 ```
 features/<feature_name>/
 ├── domain/
 │   ├── model/         // Pure Kotlin immutable models
 │   ├── repository/    // Repository interfaces (no data source dependencies)
-│   └── usecase/       // Single-responsibility use cases
+│   └── usecase/       // Single-responsibility use cases returning AppResult<T>
 ├── data/
 │   ├── datasource/    // InMemory, Network, or Engine data sources
-│   └── repository/    // Repository implementations (dispatch RTK actions on mutation)
+│   └── repository/    // Repository implementations
 └── presentation/
-    ├── mvi/           // State, Intent, Effect data structures
+    ├── mvi/           // State, Intent, Effect sealed hierarchies
     ├── <Feature>ViewModel.kt  // Extends BaseMviViewModel<State, Intent, Effect>
-    └── <Feature>Screen.kt     // Compose Multiplatform UI
+    └── <Feature>Screen.kt     // Pure Compose Multiplatform UI (accepts state & callbacks)
 ```
 
 ### Steps:
 1. **Domain**: Define models and repository interface under `domain/`.
 2. **Use Case**: Encapsulate business logic in `domain/usecase/`. Return `AppResult<T>`.
-3. **Data**: Implement repository under `data/repository/` and inject RTK store to dispatch actions.
+3. **Data**: Implement repository under `data/repository/`.
 4. **MVI Presentation**: Create `FeatureState`, `FeatureIntent`, `FeatureEffect` in `presentation/mvi/`.
 5. **ViewModel**: Extend `BaseMviViewModel`, collect flows in `viewModelScope`, and implement `handleIntent`.
-6. **Compose Screen**: Build pure Compose UI accepting `viewModel` and collecting `viewModel.state`.
+6. **Compose Screen**: Build pure Compose UI accepting `state: FeatureState` and `onIntent: (FeatureIntent) -> Unit`.
 7. **Service Locator**: Expose the new feature in [`AppContainer.kt`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/core/di/AppContainer.kt).
 8. **Navigation**: Add route to [`Screen.kt`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/core/navigation/Navigation.kt) and [`App.kt`](file:///shared/src/commonMain/kotlin/com/vampyrelord/ttsaicontroller/App.kt).
 
 ---
 
-## 6. Verification & Build Commands
+## 7. Verification & Build Commands
 
-Before marking any agent task complete, execute:
+Before marking any agent task complete, execute and verify:
 
 ```bash
-# 1. Run common & JVM unit tests
+# 1. Run common & JVM unit tests (100% pass)
 ./gradlew :shared:jvmTest
 
-# 2. Compile Desktop Application
+# 2. Run Android host unit tests (100% pass)
+./gradlew :shared:testAndroidHostTest
+
+# 3. Compile Desktop Application
 ./gradlew :desktopApp:assemble
 
-# 3. Compile Android Application
+# 4. Compile Android Application
 ./gradlew :androidApp:assembleDebug
 ```

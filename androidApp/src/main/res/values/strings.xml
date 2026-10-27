@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">TTSAIController</string>
+    <string name="accessibility_service_description">Automated gesture and touch execution service for TTSAIController and Rushwulf automation.</string>
 </resources>
