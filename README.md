@@ -6,10 +6,15 @@
 
 ## 🌟 Highlights & Key Principles
 
-- **Layered Modular Feature-Based Clean Architecture**: Separation of concerns across **Domain**, **Data**, and **Presentation** layers, organized into modular feature packages (`dashboard`, `tts`, `agent`, `settings`).
+- **Layered Modular Feature-Based Clean Architecture**: Separation of concerns across **Domain**, **Data**, and **Presentation** layers, organized into modular feature packages (`touch`, `dashboard`, `tts`, `agent`, `settings`).
 - **MVI (Model-View-Intent)**: Predictable unidirectional data flow across all screens. State is immutable, user and agent actions are typed intents, and side effects are observed as transient one-off events.
 - **Compose Multiplatform (Least Differences)**: 100% of the UI, design system, theme, and navigation are shared in `shared/commonMain`. Platform entry points (`androidApp`, `desktopApp`, `iosApp`) simply launch the root `App()` composable.
-- **RTK for Autonomous AI Agents**: Includes a Redux Toolkit (RTK) store with reactive slices (`tts`, `agent`, `settings`), middleware, action dispatchers, and an **Agent Runtime ToolKit (Agent RTK)** with a tool registry (`speak_text`, `stop_speech`, `pause_speech`, `resume_speech`, `get_playback_status`, `list_voices`, `query_state_slice`, `dispatch_rtk_action`) and audit trail.
+- **Touch & Gesture Automation**: Reusable touch sequences, dynamic point configuration, automatic layout placement (Grid, Circular, Column, Row, Spread), interactive Canvas preview, and seamless integration with **Rushwulf settings** (step delays, repeat counts, tap durations, overlay rendering).
+- **Platform Input Automation**:
+  - **Android**: Uses system `AccessibilityService` (`TouchAutomationAccessibilityService`) with `dispatchGesture()` and stroke paths, respecting Android security with explicit user consent and Settings intent deep-linking.
+  - **Desktop (JVM)**: Uses native `java.awt.Robot` for pixel-accurate single-click, double-click, long-press, and wheel scrolling.
+  - **iOS**: Pure Kotlin multiplatform sandbox fallback engine.
+- **RTK for Autonomous AI Agents**: Includes a Redux Toolkit (RTK) store with reactive slices (`touch`, `tts`, `agent`, `settings`), middleware, action dispatchers, and an **Agent Runtime ToolKit (Agent RTK)** with a tool registry (`speak_text`, `stop_speech`, `pause_speech`, `resume_speech`, `get_playback_status`, `list_voices`, `query_state_slice`, `dispatch_rtk_action`, `execute_touch_routine`, `stop_touch_automation`, `get_touch_status`) and audit trail.
 - **Zero Heavy External DI Overhead**: Clean, pure Kotlin service locator / dependency injection container (`AppContainer`) ensuring fast compilation, zero annotation processing, and straightforward testing.
 
 ---
@@ -154,12 +159,13 @@ TTSAIController/
 
 ## 🧭 Navigation & Screen Routes
 
-The app includes 4 top-level routes accessible via the universal navigation bar:
+The app includes 5 top-level routes accessible via the universal navigation bar:
 
-1. **Dashboard** (`"dashboard"`): High-level system vitals, live speech waveform visualizer, quick speech triggers, and recent activity logs.
-2. **TTS Studio** (`"tts_studio"`): Comprehensive speech synthesizer with neural voice selection, pitch/rate modulation, and real-time audio playback controls.
-3. **Agent RTK** (`"agent_workspace"`): Interactive workspace for autonomous agents with command prompt console, tool runners, live RTK state inspector, and audit log.
-4. **Settings** (`"settings"`): System theme (Dark/Light/System), audio output hardware routing, and agent autonomy permissions.
+1. **Touch Automation** (`"touch_automation"`): **Initial startup screen**. Interactive Canvas touch-point preview, manual & automatic point generation (Grid, Circular, Column, Row, Spread), coordinate validation, sequence reordering, Rushwulf profile settings, and Confirm-and-Start / Stop execution controls.
+2. **Dashboard** (`"dashboard"`): High-level system vitals, live speech waveform visualizer, quick speech triggers, and recent activity logs.
+3. **TTS Studio** (`"tts_studio"`): Comprehensive speech synthesizer with neural voice selection, pitch/rate modulation, and real-time audio playback controls.
+4. **Agent RTK** (`"agent_workspace"`): Interactive workspace for autonomous agents with command prompt console, tool runners, live RTK state inspector, and audit log.
+5. **Settings** (`"settings"`): System theme (Dark/Light/System), audio output hardware routing, and agent autonomy permissions.
 
 ---
 

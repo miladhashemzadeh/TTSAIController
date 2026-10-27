@@ -17,10 +17,3 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
-
-# Project exclude paths
-/androidApp/
-/desktopApp/
-/gradle/
-/iosApp/
-/shared/

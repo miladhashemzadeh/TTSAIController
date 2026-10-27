@@ -32,6 +32,7 @@ import com.vampyrelord.ttsaicontroller.features.agent.presentation.AgentScreen
 import com.vampyrelord.ttsaicontroller.features.dashboard.presentation.DashboardScreen
 import com.vampyrelord.ttsaicontroller.features.settings.domain.model.AppThemeMode
 import com.vampyrelord.ttsaicontroller.features.settings.presentation.SettingsScreen
+import com.vampyrelord.ttsaicontroller.features.touch.presentation.TouchAutomationScreen
 import com.vampyrelord.ttsaicontroller.features.tts.presentation.TtsScreen
 
 /**
@@ -40,7 +41,8 @@ import com.vampyrelord.ttsaicontroller.features.tts.presentation.TtsScreen
  */
 @Composable
 fun App(
-    container: AppContainer = remember { AppContainer() }
+    container: AppContainer = remember { AppContainer() },
+    onRequestAccessibilitySettings: (() -> Unit)? = null
 ) {
     val settingsState by container.settingsViewModel.state.collectAsState()
     val isSystemDark = isSystemInDarkTheme()
@@ -74,10 +76,41 @@ fun App(
                         .weight(1f)
                 ) {
                     when (currentScreen) {
-                        Screen.Dashboard -> DashboardScreen(viewModel = container.dashboardViewModel)
-                        Screen.TtsStudio -> TtsScreen(viewModel = container.ttsViewModel)
-                        Screen.AgentWorkspace -> AgentScreen(viewModel = container.agentViewModel)
-                        Screen.Settings -> SettingsScreen(viewModel = container.settingsViewModel)
+                        Screen.TouchAutomation -> {
+                            val touchState by container.touchAutomationViewModel.state.collectAsState()
+                            TouchAutomationScreen(
+                                state = touchState,
+                                onIntent = container.touchAutomationViewModel::sendIntent,
+                                onRequestAccessibilitySettings = onRequestAccessibilitySettings
+                            )
+                        }
+                        Screen.Dashboard -> {
+                            val dashboardState by container.dashboardViewModel.state.collectAsState()
+                            DashboardScreen(
+                                state = dashboardState,
+                                onIntent = container.dashboardViewModel::sendIntent
+                            )
+                        }
+                        Screen.TtsStudio -> {
+                            val ttsState by container.ttsViewModel.state.collectAsState()
+                            TtsScreen(
+                                state = ttsState,
+                                onIntent = container.ttsViewModel::sendIntent
+                            )
+                        }
+                        Screen.AgentWorkspace -> {
+                            val agentState by container.agentViewModel.state.collectAsState()
+                            AgentScreen(
+                                state = agentState,
+                                onIntent = container.agentViewModel::sendIntent
+                            )
+                        }
+                        Screen.Settings -> {
+                            SettingsScreen(
+                                state = settingsState,
+                                onIntent = container.settingsViewModel::sendIntent
+                            )
+                        }
                     }
                 }
 

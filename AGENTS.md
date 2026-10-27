@@ -50,11 +50,13 @@ flowchart TD
     AppShell["App Container Shell (App.kt)"]
     AppShell --> Nav["Universal App Bottom Navigation / Tab Bar"]
 
+    Nav --> RouteTouch["Screen.TouchAutomation ('touch_automation') [DEFAULT]"]
     Nav --> RouteDash["Screen.Dashboard ('dashboard')"]
     Nav --> RouteTts["Screen.TtsStudio ('tts_studio')"]
     Nav --> RouteAgent["Screen.AgentWorkspace ('agent_workspace')"]
     Nav --> RouteSettings["Screen.Settings ('settings')"]
 
+    RouteTouch -->|"Switch Screen"| RouteDash
     RouteDash -->|"Quick Action"| RouteTts
     RouteDash -->|"Quick Action"| RouteAgent
     RouteAgent -->|"RTK State Query"| AppShell
@@ -63,6 +65,7 @@ flowchart TD
 ### Route Definitions:
 | Screen | Route ID | Title | Purpose |
 | :--- | :--- | :--- | :--- |
+| **`Screen.TouchAutomation`** | `"touch_automation"` | `Touch Automation` | **Default startup screen**. Configures, visualizes, and executes touch/click automation routines with Rushwulf settings. |
 | **`Screen.Dashboard`** | `"dashboard"` | `Dashboard` | Real-time system status, audio waveform, KPI counters, and quick actions. |
 | **`Screen.TtsStudio`** | `"tts_studio"` | `TTS Studio` | Speech text input, voice selection, modulation sliders (pitch, rate, volume), audio controls, and queue/history. |
 | **`Screen.AgentWorkspace`** | `"agent_workspace"` | `Agent RTK` | Agent persona selector, command prompt console, interactive tool runners, live RTK state slices, and audit log. |
@@ -143,6 +146,28 @@ All tools implement [`AgentTool`](file:///shared/src/commonMain/kotlin/com/vampy
   }
   ```
 
+#### 9. `execute_touch_routine`
+- **Category**: `TOUCH_AUTOMATION`
+- **Description**: Execute a multi-point touch or click automation sequence.
+- **Parameters**:
+  ```json
+  {
+    "pointsCount": { "type": "number", "required": false, "default": 3, "description": "Number of points to generate if none loaded" },
+    "repeatCount": { "type": "number", "required": false, "default": 1, "description": "Number of routine cycles" },
+    "strategy": { "type": "string", "required": false, "default": "GRID", "description": "GRID, CIRCULAR, VERTICAL_COLUMN, HORIZONTAL_ROW, SPREAD" }
+  }
+  ```
+
+#### 10. `stop_touch_automation`
+- **Category**: `TOUCH_AUTOMATION`
+- **Description**: Immediately stop any ongoing touch or mouse automation routine.
+- **Parameters**: None.
+
+#### 11. `get_touch_status`
+- **Category**: `SYSTEM_INSPECTION`
+- **Description**: Inspect platform automation capabilities and current touch execution state.
+- **Parameters**: None.
+
 ---
 
 ## 5. How Agents Should Add New Features
@@ -184,9 +209,12 @@ Before marking any agent task complete, execute:
 # 1. Run common & JVM unit tests
 ./gradlew :shared:jvmTest
 
-# 2. Compile Desktop Application
+# 2. Run Android host unit tests
+./gradlew :shared:testAndroidHostTest
+
+# 3. Compile Desktop Application
 ./gradlew :desktopApp:assemble
 
-# 3. Compile Android Application
+# 4. Compile Android Application
 ./gradlew :androidApp:assembleDebug
 ```
